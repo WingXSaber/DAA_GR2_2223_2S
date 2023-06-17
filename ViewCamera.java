@@ -1,5 +1,5 @@
 public class ViewCamera {
-    protected double zoom = 1,
+    public double zoom = 1,
                      x, y, sizeX, sizeY;
 
     public ViewCamera(double x, double y, double sizeX, double sizeY){

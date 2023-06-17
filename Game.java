@@ -35,7 +35,7 @@ public class Game extends Canvas implements Runnable{
         gameObjectHandler = new GameObjectHandler(gameUnit);
 
         ImageLoader loader = new ImageLoader();
-        BufferedImage level = loader.loadImage("res/level1.png");
+        BufferedImage level = loader.loadImage("res/level0.png");
         
         spawnLevel(level);
 
@@ -59,7 +59,8 @@ public class Game extends Canvas implements Runnable{
                     //green = (pixel >> 8) & 0xff,
                     blue = (pixel) & 0xff;
                 if(red == 255){
-                    gameObjectHandler.add(new ObjectWallTree(x*gameUnit, 
+                    gameObjectHandler.addToGame(new ObjectWallTree(gameObjectHandler,
+                                                             x*gameUnit, 
                                                              y*gameUnit, 
                                                              gameUnit, 
                                                              gameUnit,
@@ -67,13 +68,14 @@ public class Game extends Canvas implements Runnable{
                 }
                 else if(blue == 255){
                     collisionImage = loader.loadImage("res/coll_Player.png");
-                    player = new ObjectPlayer(x*gameUnit,
-                                        y*gameUnit, 
-                                        gameUnit,
-                                        gameUnit,
-                                        this,
-                                        collisionImage);
-                    gameObjectHandler.add(player);
+                    player = new ObjectPlayer(gameObjectHandler,
+                                              x*gameUnit,
+                                              y*gameUnit, 
+                                              gameUnit,
+                                              gameUnit,
+                                              this,
+                                              collisionImage);
+                    gameObjectHandler.addToGame(player);
                 }
             }
         }
@@ -107,13 +109,17 @@ public class Game extends Canvas implements Runnable{
         g.setColor(Color.DARK_GRAY);
         g.fillRect(camera.getIntX(), camera.getIntY(), windowWidth, windowHeight);
         
-        gameObjectHandler.render(g, camera);
+        int count = gameObjectHandler.render(g, camera);
 
         g.setColor(Color.white);
         g.drawString("FPS:"+FPS, camera.getIntX()+windowWidth-150, camera.getIntY()+20);
         g.drawString("Player X : "+player.x, camera.getIntX()+windowWidth-150, camera.getIntY()+40);
         g.drawString("Player Y : "+player.y, camera.getIntX()+windowWidth-150, camera.getIntY()+60);
-        g.drawString("Object Count: "+gameObjectHandler.allObjectList.size(), camera.getIntX()+windowWidth-150, camera.getIntY()+80);
+        g.drawString("Object Count: "+gameObjectHandler.allObjectCount, camera.getIntX()+windowWidth-150, camera.getIntY()+80);
+        g.drawString("Camera X: "+ camera.getIntX(), camera.getIntX()+windowWidth-150, camera.getIntY()+100);
+        g.drawString("Camera Y: "+ camera.getIntY(), camera.getIntX()+windowWidth-150, camera.getIntY()+120);
+        g.drawString("Rendered Count: "+ count, camera.getIntX()+windowWidth-150, camera.getIntY()+140);
+        
 
         ////////////////////////////////////
 
