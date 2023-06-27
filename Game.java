@@ -6,6 +6,9 @@ import java.awt.Graphics2D;
 import java.awt.Toolkit;
 import java.awt.Color;
 
+//import java.util.ArrayList;
+//import java.awt.Point;
+
 
 
 public class Game extends Canvas implements Runnable{
@@ -15,24 +18,21 @@ public class Game extends Canvas implements Runnable{
     Thread thread;
     boolean isRunning = false,
             isPaused = false;
-    double GAME_HERTZ = 60;     //target logic rate
-    double TARGET_FPS = 60;     //target display FPS
+    double GAME_HERTZ = 60,     //target logic rate
+           TARGET_FPS = 60;     //target display FPS
     int framecount = 0, FPS = 0,    //used for display
         windowWidth = 0,    
         windowHeight = 0,
         gameUnit = 32;
-
-    boolean up = false, down = false, left = false, right = false;
     
     GameObjectHandler gameObjectHandler;
-    ObjectPlayer player;
     ViewCamera camera;
      
     public Game(){//Constructor method
         gameWindow = new Window(1024, 768, "Game", this);
-        this.addKeyListener(new KeyInput(this));
-
-        gameObjectHandler = new GameObjectHandler(gameUnit);
+        gameObjectHandler = new GameObjectHandler(gameUnit, GAME_HERTZ);
+        this.addKeyListener(new KeyInput(gameObjectHandler));
+        
 
         ImageLoader loader = new ImageLoader();
         BufferedImage level = loader.loadImage("res/level0.png");
@@ -41,12 +41,63 @@ public class Game extends Canvas implements Runnable{
 
         camera = new ViewCamera(0, 0, windowWidth, windowHeight);
         
+        /*
+        //Demonstration on how we create gridObstacles from map
+        
+        //for(int y=0; y<gameObjectHandler.gridObstacles[0].length; y++){
+        //    for(int x=0; x<gameObjectHandler.gridObstacles.length; x++){
+        //        if(gameObjectHandler.gridObstacles[x][y])
+        //            System.out.print("W");
+        //        else
+        //            System.out.print(" ");
+        //    }
+        //    System.out.println();
+        //}
+        
+        System.out.println();
+        for(GameObject object : gameObjectHandler.allObjectList){
+            if(object.id == GameObjectID.Enemy){
+                System.out.println();
+                
+                String grid [][] = new String[gameObjectHandler.gridObstacles[0].length][gameObjectHandler.gridObstacles.length];
+                for(int y=0; y<gameObjectHandler.gridObstacles[0].length; y++){
+                    for(int x=0; x<gameObjectHandler.gridObstacles.length; x++){
+                        if(gameObjectHandler.gridObstacles[x][y])
+                            grid[x][y] = "W";
+                        else
+                            grid[x][y] = " ";   
+                        if(x == gameObjectHandler.player.x/gameUnit && y == gameObjectHandler.player.y/gameUnit)
+                            grid[x][y] = "@";   
+                    }                
+                }
+
+                ArrayList <Point> path = object.generatePathTo(gameObjectHandler.player.x, gameObjectHandler.player.y);
+                int a =0;
+                for(Point point: path){
+                    grid[point.x/gameObjectHandler.gameUnit][point.y/gameObjectHandler.gameUnit] = ""+a;                    
+                    a++;
+                    if(a>9)
+                        a=0;
+                }
+
+                for(int y=0; y<grid[0].length; y++){
+                    for(int x=0; x<grid.length; x++){
+                        System.out.print(grid[x][y]);
+                    }        
+                    System.out.println();        
+                }
+
+            }
+        }
+        */
+
         start();
     }
     
     public void spawnLevel(BufferedImage image){
         int width = image.getWidth(),
             height = image.getHeight();
+        gameObjectHandler.gridObstacles = new boolean [width] [height];
 
         ImageLoader loader = new ImageLoader();
         BufferedImage collisionImage; 
@@ -56,41 +107,54 @@ public class Game extends Canvas implements Runnable{
                 //get pixel color value
                 int pixel = image.getRGB(x,y),
                     red = (pixel >> 16) & 0xff,
-                    //green = (pixel >> 8) & 0xff,
+                    green = (pixel >> 8) & 0xff,
                     blue = (pixel) & 0xff;
                 if(red == 255){
+                    collisionImage = loader.loadImage("res/coll_circle_32x32.png");
                     gameObjectHandler.addToGame(new ObjectWallTree(gameObjectHandler,
                                                              x*gameUnit, 
                                                              y*gameUnit, 
-                                                             gameUnit, 
-                                                             gameUnit,
-                                                             null));
-                }
-                else if(blue == 255){
-                    collisionImage = loader.loadImage("res/coll_Player.png");
-                    player = new ObjectPlayer(gameObjectHandler,
+                                                             collisionImage.getWidth(),
+                                                             collisionImage.getHeight(),                                                             
+                                                             collisionImage));
+                    gameObjectHandler.gridObstacles[x][y] = true;
+                }else if(blue == 255){
+                    collisionImage = loader.loadImage("res/coll_circle_32x32.png");
+                    gameObjectHandler.player = new ObjectPlayer(gameObjectHandler,
                                               x*gameUnit,
                                               y*gameUnit, 
-                                              gameUnit,
-                                              gameUnit,
-                                              this,
+                                              collisionImage.getWidth(),
+                                              collisionImage.getHeight(),
                                               collisionImage);
-                    gameObjectHandler.addToGame(player);
+                    gameObjectHandler.addToGame(gameObjectHandler.player);
+                }else if(green == 255){
+                    collisionImage = loader.loadImage("res/coll_circle_32x32.png");
+                    gameObjectHandler.addToGame(new ObjectEnemy(gameObjectHandler,
+                                              x*gameUnit,
+                                              y*gameUnit, 
+                                              collisionImage.getWidth(),
+                                              collisionImage.getHeight(),
+                                              5,
+                                              collisionImage));                          
                 }
+            
             }
         }
-        
+
+        for(GameObject object : gameObjectHandler.allObjectList)
+            //update the walls and their imageCollision based on neighbor                
+            object.updateCollisionImageWithNeighbors();        
     }
+
+
 
     public void tick(){
         //System.out.println("Frame:"+framecount);
         gameObjectHandler.tick();
-        camera.tick(player, windowWidth, windowHeight);
+        camera.tick(gameObjectHandler.player, windowWidth, windowHeight);
     }
 
     public void render(){
-        //System.out.println("FPS:"+FPS);
-
         BufferStrategy bs = this.getBufferStrategy(); //memory where graphics is placed into
         if(bs==null){
             this.createBufferStrategy(3); //use 2 or 3 only for double or triple buffering
@@ -103,32 +167,26 @@ public class Game extends Canvas implements Runnable{
 
         g.translate(-camera.x,-camera.y);  //move view towards where camera is
         
-        /////////////////////////////////////        
-        //whichever gets rendered last, goes to the top of the view.
-
+        //whichever gets rendered last, goes to the top of the view. =========
         g.setColor(Color.DARK_GRAY);
-        g.fillRect(camera.getIntX(), camera.getIntY(), windowWidth, windowHeight);
-        
-        int count = gameObjectHandler.render(g, camera);
+        g.fillRect(camera.getIntX(), camera.getIntY(), windowWidth, windowHeight);     //background color    
+        int count = gameObjectHandler.render(g, camera);    //draw objects
+        if(gameObjectHandler.debugText){
+            g.setColor(Color.white);
+            g.drawString("FPS:"+FPS, camera.getIntX()+windowWidth-150, camera.getIntY()+20);
+            g.drawString("Player X : "+gameObjectHandler.player.x, camera.getIntX()+windowWidth-150, camera.getIntY()+40);
+            g.drawString("Player Y : "+gameObjectHandler.player.y, camera.getIntX()+windowWidth-150, camera.getIntY()+60);
+            g.drawString("Object Count: "+gameObjectHandler.allObjectCount, camera.getIntX()+windowWidth-150, camera.getIntY()+80);
+            g.drawString("Camera X: "+ camera.getIntX(), camera.getIntX()+windowWidth-150, camera.getIntY()+100);
+            g.drawString("Camera Y: "+ camera.getIntY(), camera.getIntX()+windowWidth-150, camera.getIntY()+120);
+            g.drawString("Rendered Count: "+ count, camera.getIntX()+windowWidth-150, camera.getIntY()+140); 
+        }
+        //=====================================================================
 
-        g.setColor(Color.white);
-        g.drawString("FPS:"+FPS, camera.getIntX()+windowWidth-150, camera.getIntY()+20);
-        g.drawString("Player X : "+player.x, camera.getIntX()+windowWidth-150, camera.getIntY()+40);
-        g.drawString("Player Y : "+player.y, camera.getIntX()+windowWidth-150, camera.getIntY()+60);
-        g.drawString("Object Count: "+gameObjectHandler.allObjectCount, camera.getIntX()+windowWidth-150, camera.getIntY()+80);
-        g.drawString("Camera X: "+ camera.getIntX(), camera.getIntX()+windowWidth-150, camera.getIntY()+100);
-        g.drawString("Camera Y: "+ camera.getIntY(), camera.getIntX()+windowWidth-150, camera.getIntY()+120);
-        g.drawString("Rendered Count: "+ count, camera.getIntX()+windowWidth-150, camera.getIntY()+140);
-        
-
-        ////////////////////////////////////
-
-        g.dispose();  //to safely dispose for memory purposes, this is preferable than letting Java's garbage collector do it automatically.        
-        
+        g.dispose();  //to safely dispose for memory purposes, this is preferable than letting Java's garbage collector do it automatically.                
         bs.show();  //display the current frame we just drew.
-
-        //this smooths out animations on some systems, particularly Linux+GNU systems
-        Toolkit.getDefaultToolkit().sync();                
+        
+        Toolkit.getDefaultToolkit().sync();  //this smooths out animations on some systems, particularly Linux+GNU systems
     }
 
     public void start(){
@@ -147,7 +205,9 @@ public class Game extends Canvas implements Runnable{
     }
     
     public void run(){//run method due to Runnable, this will keep looping.
-        this.requestFocus(); //Many components – even those primarily operated with the mouse, such as buttons – can be operated with the keyboard. For a key press to affect a component, the component must have the keyboard focus.
+        this.requestFocus(); //Many components – even those primarily operated with the mouse, 
+                             //such as buttons – can be operated with the keyboard. 
+                             //For a key press to affect a component, the component must have the keyboard focus.
 
         //This game loop based on alleged Notch's Game Loop, modified by me
 

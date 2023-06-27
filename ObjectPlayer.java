@@ -2,95 +2,83 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.Color;
 
-public class ObjectPlayer extends GameObject{    
-    Game game; //transfer this shit to gameobjecthandler.
+public class ObjectPlayer extends GameObject{        
     private double speed = 10;
     
     public ObjectPlayer(GameObjectHandler handler, double x, double y, 
-                        double sizeX, double sizeY, Game game, BufferedImage collisionImage){
-        super(handler, x, y, GameObjectID.Player, sizeX, sizeY, collisionImage);        
-        this.game = game;      
+                        double sizeX, double sizeY, BufferedImage collisionImage){
+        super(handler, x, y, GameObjectID.Player, sizeX, sizeY, collisionImage);  
     }
 
     public void tick(){        
-        //handler.remove(this);
-        
-        if(game.left && velX>-speed)
-            velX--;
-        if(game.right && velX<speed)
-            velX++;
-        if(game.left && game.right || !game.left && !game.right)
-            velX = 0;
-        x += velX;
-        
-        //floor(sizeX/gameUnit ) = amount of cells in X??
+        //Movement ===============================================================
+        if(handler.left && handler.right || !handler.left && !handler.right) {                   
+            if(velX>0)    
+                if(velX<1)  //if floating value but near zero.
+                    velX = 0;
+                else
+                    velX--;
+            else if(velX<0)  
+                if(velX>1)
+                    velX = 0;
+                else              
+                    velX++;                    
+        }else{
+            if(handler.left && velX>-speed)
+                velX--;
+            else if(handler.right && velX<speed)
+                velX++;
+        }        
 
-        //this is naive, need to change later when data structure works
-        /*
-        thisLoop:
-        for(int i=0; i<objectList.size(); i++){
-            //if(!objectList.get(i).id.equals(GameObjectID.Player)){
-            if(!objectList.get(i).equals(this)){
-                //if(objectList.get(i).getBounds().intersects(this.getBounds())){
-                if(isCollidingWith(objectList.get(i))){
-                    x-=velX;
-                    velX=0;
-                    break thisLoop;
-                }                    
+        if(velX!=0){            
+            handler.removeFromHashMap(this);      
+            x += velX;
+            if(checkAnyCollision()){
+                x-=velX;
+                velX=0;
             }
-        }*/
-        //handler.remove(this);   
-        
-        if(checkAnyCollision()){
-            x-=velX;
-            velX=0;
-        }
-        
-        // handler.add(this);
-        
-               
-        if(this.game.up && velY>-speed)
-            velY--;
-        if(game.down && velY<speed)
-            velY++;
-        if(game.up && game.down || !game.up && !game.down)
-            this.velY = 0;        
-        y += velY;
+            handler.addToHashMap(this);
+        } 
 
-        //this is naive, need to change later when data structure works
-        /*thisLoop:
-        for(int i=0; i<objectList.size(); i++){
-            //if(!objectList.get(i).id.equals(GameObjectID.Player)){
-            if(!objectList.get(i).equals(this)){            
-                //if(objectList.get(i).getBounds().intersects(this.getBounds())){
-                if(isCollidingWith(objectList.get(i))){
-                    y-=velY;
-                    velY=0;
-                    break thisLoop;
-                }                    
-            }
-        }*/            
-        
-        if(checkAnyCollision()){
-            y-=velY;
-            velY=0;
+
+        if(handler.up && handler.down || !handler.up && !handler.down){
+             if(velY>0)
+                if(velY<1)  //if floating value but near zero.
+                    velY = 0;
+                else
+                    velY--;
+            else if(velY<0)
+                if(velY>1)
+                    velY = 0;
+                else
+                    velY++;
+        }else{ 
+            if(this.handler.up && velY>-speed)
+                velY--;
+            else if(handler.down && velY<speed)
+                velY++;
         }
-        
-        
-        //handler.add(this);
+
+        if(velY!=0){
+            handler.removeFromHashMap(this);      
+            y += velY;                
+            if(checkAnyCollision()){
+                y-=velY;
+                velY=0;
+            }
+            handler.addToHashMap(this);
+        }   
+        //========================================================================
     }       
 
 
     public void render(Graphics g) {
-        g.setColor(Color.WHITE);
-        g.fillRect(floor(x),floor(y-sizeY), floor(sizeX), floor(sizeY*2));          
-        // g.drawImage(collisionImage, floor(x),floor(y), null);
-    }
-
-    public double getKeyX(){
-        return x;
-    }
-    public double getKeyY(){
-        return y;
+        if(handler.debugCollisionBoxOnly){
+            g.drawImage(collisionImage, floor(x), floor(y), null);
+        }else if (handler.debugNoTextureMode){
+            g.setColor(Color.WHITE);
+            //g.fillRect(floor(x), floor(y), floor(sizeX), floor(sizeY));
+            g.fillRect(floor(x), floor(y-sizeY), floor(sizeX), floor(sizeY*2));
+        }
     }
 }

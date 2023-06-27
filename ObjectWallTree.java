@@ -2,7 +2,6 @@
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
-//import java.awt.Color;
 
 public class ObjectWallTree extends GameObject{    
 
@@ -15,9 +14,13 @@ public class ObjectWallTree extends GameObject{
     }
 
     public void render(Graphics g){
-        g.setColor(Color.black);
-        g.fillRect(floor(x), floor(y), floor(sizeX), floor(sizeY));
-        //g.drawImage(collisionImage, floor(x), floor(y), null);
+        if(handler.debugCollisionBoxOnly){
+            g.drawImage(collisionImage, floor(x), floor(y), null);
+        }else if (handler.debugNoTextureMode){
+            g.setColor(Color.BLACK);
+            //g.fillRect(floor(x), floor(y), floor(sizeX), floor(sizeY));
+            g.fillRect(floor(x), floor(y-sizeY), floor(sizeX), floor(sizeY*2));
+        }
     }
 
 }

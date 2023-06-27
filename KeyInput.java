@@ -3,34 +3,34 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
 public class KeyInput extends KeyAdapter{
-    Game game;    
+    GameObjectHandler handler;    
 
-    public KeyInput(Game game){
-        this.game = game;
+    public KeyInput(GameObjectHandler handler){
+        this.handler = handler;
     }
 
     public void keyPressed(KeyEvent e){
         int key = e.getKeyCode();
         if(key == KeyEvent.VK_W || key == KeyEvent.VK_UP) 
-            this.game.up = true;
+            this.handler.up = true;
         if(key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN)
-            this.game.down = true;        
+            this.handler.down = true;        
         if(key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT) 
-            this.game.left = true;
+            this.handler.left = true;
         if(key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT) 
-            this.game.right = true;
+            this.handler.right = true;
     }
 
     public void keyReleased(KeyEvent e){
         int key = e.getKeyCode();        
         if(key == KeyEvent.VK_W || key == KeyEvent.VK_UP) 
-            this.game.up = false;
+            this.handler.up = false;
         if(key == KeyEvent.VK_S || key == KeyEvent.VK_DOWN)
-            this.game.down = false;
+            this.handler.down = false;
         if(key == KeyEvent.VK_A || key == KeyEvent.VK_LEFT)
-            this.game.left = false;
+            this.handler.left = false;
         if(key == KeyEvent.VK_D || key == KeyEvent.VK_RIGHT)
-            this.game.right = false;
+            this.handler.right = false;
     }
 
 }
