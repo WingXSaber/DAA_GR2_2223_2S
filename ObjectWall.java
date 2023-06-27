@@ -3,9 +3,9 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 
-public class ObjectWallTree extends GameObject{    
+public class ObjectWall extends GameObject{    
 
-    public ObjectWallTree(GameObjectHandler gameObjectHandler, double x, double y, double sizeX, double sizeY, BufferedImage collisionImage){
+    public ObjectWall(GameObjectHandler gameObjectHandler, double x, double y, double sizeX, double sizeY, BufferedImage collisionImage){
         super(gameObjectHandler, x, y, GameObjectID.Wall, sizeX, sizeY, collisionImage);        
     }
 
