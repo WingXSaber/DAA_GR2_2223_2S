@@ -18,8 +18,10 @@ public class Window{
         displayPanel.setPreferredSize(new Dimension(width, height));
 
         displayPanel.add(game);
-
         frame.add(displayPanel);
+
+        //frame.setUndecorated(true);
+
         frame.pack();   //finish initalize jFrame.
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);  //so window spawns in the center of the screen
