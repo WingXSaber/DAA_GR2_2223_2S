@@ -6,5 +6,5 @@ public enum GameObjectID {
     Wall(),
     OutWall(),    
     Enemy(),
-    Attack(),
+    Bullet(),
 }

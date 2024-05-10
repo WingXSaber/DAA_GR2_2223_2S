@@ -6,148 +6,77 @@ import java.awt.Point;
 
 public class GameObjectHandler {
 
-    ArrayList <GameObject> allObjectList = new ArrayList<>(),
-                           toBeRemovedObjectList = new ArrayList<>(),
-                           toBeAddedObjectList = new ArrayList<>();
+    ArrayList <GameObject> allObjectList = new ArrayList<>();
     HashMap <Point,  ArrayList <GameObject>> objectHashMap = new HashMap <>();//Abandoned HashTable in favor of HashMap. Better performance
-    ObjectPlayer player = null;
-    ViewCamera camera;
+    ObjectPlayer player;
 
-    int gameUnit, allObjectCount = 0, mouseX = 0, mouseY = 0,    
-        wallCount =0,
-        enemyCount =0,
-        ammo = 100;
-    double GAME_HERTZ;
-
+    int gameUnit, allObjectCount = 0, GAME_HERTZ;
     boolean gridObstacles [] [],
-            inputUp = false, inputDown = false, inputLeft = false, inputRight = false,
-            inputAttack1 = false,
-            debugNaiveUnsortedRender = false,
-            debugText = false, debugCollisionBoxOnly = false, debugNoTextureMode = false,
-            debugShowPathFinding = false, debugShowVisualContact = false,
-            isRestart = false, killAllEnemies = false;
+            up = false, down = false, left = false, right = false,
+            debugText = true, debugCollisionBoxOnly = false, debugNoTextureMode = true,
+            debugShowPathFinding = true, debugShowVisualContact = true;
+            
 
-    public GameObjectHandler(int gameUnit, double GAME_HERTZ,  ViewCamera camera) {
+    public GameObjectHandler(int gameUnit, double GAME_HERTZ){
         this.gameUnit = gameUnit;
-        this.GAME_HERTZ = GAME_HERTZ;
-        this.camera = camera;        
-        if(camera == null)
-            throw new UnsupportedOperationException("Camera cannot be null at GameObjectHandler intilization.");        
+        this.GAME_HERTZ = (int) GAME_HERTZ;
     }
 
-
-    public void tick(){      
-        if(player.health<=0)
-            removeFromGame(player);  
-
-        for(GameObject object : allObjectList){            
-            object.tick();
-            if(killAllEnemies && object.id == GameObjectID.Enemy)
-                object.health = 0;
-        }
-
-        //When adding/removing objects in list while iterating through it,
-        //such as spawing bullets or spawining melee attacks,
-        //it creates a java.util.ConcurrentModificationException
-        //So we add them to a list that will be added/removed later
-        
-        if(toBeAddedObjectList.size()>0){
-            for(GameObject gameObject : toBeAddedObjectList){
-                allObjectList.add(gameObject);
-                addToHashMap(gameObject);
-                //allObjectCount++;
-            }
-            this.toBeAddedObjectList = new ArrayList<>();
-        }
-        
-        if(toBeRemovedObjectList.size()>0){
-            for(GameObject gameObject : toBeRemovedObjectList){
-                allObjectList.remove(gameObject);                
-                removeFromHashMap(gameObject);                
-                gameObject = null;
-                //allObjectCount--;
-            }
-            this.toBeRemovedObjectList = new ArrayList<>();
-        }
-        allObjectCount = allObjectList.size();
-        
+    public void tick(){        
+        for(GameObject object : allObjectList)
+            object.tick();                     
     }   
 
-    public int render(Graphics g){
-        int renderCount = 0;
-
-        if(debugNaiveUnsortedRender){
-
-            //this the naive
-            for(GameObject object : allObjectList){
-                object.render(g);
-            }
-            renderCount = allObjectList.size();
-
-        }else{
-            
-            ArrayList <GameObject> renderList = new ArrayList<>();
-            for(int i = floor(camera.x/gameUnit)-2; i<floor((camera.x+camera.sizeX)/gameUnit)+2; i++){            
-                for(int j = floor(camera.y/gameUnit)-2; j<floor((camera.y+camera.sizeY)/gameUnit)+4; j++){               
-                    ArrayList <GameObject> objectList = objectHashMap.get(new Point(i, j));
-                    if(objectList != null){
-                        for(GameObject object: objectList){
-                            renderList.add(object);                           
-                        }
-                    }
-                }         
-            }
-
-            //This is the Quicksort by Y, ascending ====================
-            renderList.sort(new Comparator<GameObject>() { 
-                @Override
-                public int compare(GameObject ob1, GameObject ob2){
-                    double answer = ob1.centerY - ob2.centerY;                    
-                    //double answer = ob1.y - ob2.y;                    
-                    if(answer > 0) return 1;        //if greater
-                    else if (answer < 0) return -1; //if less
-                    else return 0;                  //if equal
-                }
-            });
-            //=========================================================
-
-            for(int i=0; i<renderList.size(); i++){
-                renderList.get(i).render(g);
-            }
-
-            renderCount = renderList.size();
+    public int render(Graphics g, ViewCamera camera){
+        /*
+        //this the naive
+        for(GameObject object : allObjectList){
+            object.render(g);
         }
-        return renderCount;
+        */
+        ArrayList <GameObject> renderList = new ArrayList<>();
+        for(int i = floor(camera.x/gameUnit)-1; i<floor((camera.x+camera.sizeX)/gameUnit)+1; i++){            
+            for(int j = floor(camera.y/gameUnit)-1; j<floor((camera.y+camera.sizeY)/gameUnit)+4; j++){               
+                ArrayList <GameObject> objectList = objectHashMap.get(new Point(i, j));
+                if(objectList != null){
+                    for(GameObject object: objectList){
+                        renderList.add(object);                           
+                    }
+                }
+            }         
+        }
+
+        //This is the Quicksort by Y, ascending ====================
+        renderList.sort(new Comparator<GameObject>() { 
+            @Override
+            public int compare(GameObject ob1, GameObject ob2){
+                double answer = ob1.y - ob2.y;
+                if(answer > 0) return 1;        //if greater
+                else if (answer < 0) return -1; //if less
+                else return 0;                  //if equal
+            }
+        });
+        //=========================================================
+
+        for(int i=0; i<renderList.size(); i++){
+            renderList.get(i).render(g);
+        }
+        return renderList.size();
     }    
     
     public void addToGame(GameObject gameObject){
-        toBeAddedObjectList.add(gameObject);
-        switch(gameObject.id){
-            case Enemy:
-                enemyCount++;
-                break;
-            case Wall:
-                wallCount++;
-                break;
-            default:
-                break;
-        }
+        if(!allObjectList.contains(gameObject))
+            allObjectList.add(gameObject);
+        addToHashMap(gameObject);
+        allObjectCount++;
     }
 
     public void removeFromGame(GameObject gameObject){
-        toBeRemovedObjectList.add(gameObject);
-        switch(gameObject.id){
-            case Enemy:
-                enemyCount--;
-                break;
-            case Wall:
-                wallCount--;
-                break;
-            default:
-                break;
-        }
+        if(allObjectList.contains(gameObject))
+            allObjectList.remove(gameObject);
+        removeFromHashMap(gameObject);
+        allObjectCount--;
     }  
-
 
     /*
         Here's the idea:

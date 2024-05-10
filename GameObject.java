@@ -5,175 +5,96 @@ import java.awt.Rectangle;
 import java.awt.geom.Area;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.PriorityQueue;
+import java.awt.Color;
 
 public abstract class GameObject{
-    protected double x, y, sizeX, sizeY, velX, velY, speed, centerX, centerY;
-    private double sizeXHalf, sizeYHalf;
-    protected int health = 0, healthMax = 0;
+    protected double x, y, sizeX, sizeY, velX, velY, speed;
     protected GameObjectID id;
     protected BufferedImage collisionImage; 
-    protected GameObjectHandler handler;
-    protected ObjectState state = ObjectState.idle;
+    public GameObjectHandler handler;
+    public GameObjectState state = GameObjectState.idle;
 
-    public GameObject(GameObjectHandler handler, double x, double y, double speed,
-                      GameObjectID id, BufferedImage collisionImage){
+    double  radiansToDegrees = 180 / Math.PI,
+            degreesToRadians = Math.PI / 180;
+
+    public GameObject(GameObjectHandler handler, double x, double y, 
+                      GameObjectID id, double sizeX, double sizeY, BufferedImage collisionImage){
         this.handler = handler;
         this.x = x;
         this.y = y;
-        this.speed = speed;
-        this.sizeX = collisionImage.getWidth();
-        this.sizeY = collisionImage.getHeight();
+        this.sizeX = sizeX;
+        this.sizeY = sizeY;
         this.id = id;
-        this.collisionImage = collisionImage;            
-        this.sizeXHalf = sizeX/2;
-        this.sizeYHalf = sizeY/2;
-        this.centerX = x+sizeXHalf;
-        this.centerY = y+sizeYHalf;
+        //initalize collisionImage 
+        if(collisionImage == null && !id.equals(GameObjectID.OutWall)){ //if no buffered image and not an outwall
+            this.collisionImage = new BufferedImage(floor(sizeX), floor(sizeY), BufferedImage.TYPE_BYTE_BINARY);
+            Graphics g = this.collisionImage.getGraphics();
+            g.setColor(Color.WHITE);
+            g.fillRect(0, 0, floor(sizeX), floor(sizeY));
+            g.dispose();        
+        }else
+            this.collisionImage = collisionImage;        
+        //if object is an outWall, no collisionImage needed
     }
-    
-    public BufferedImage loadImage(String path){        
-        return new ImageLoader().loadImage(path);
+
+    public void updateCollisionImageWithNeighbors(){ 
+        //used for ObjectWall
+        //update the walls and their imageCollision based on neighbor
+        //ideally set after all walls have been spawned.
+        if(id == GameObjectID.Wall){
+            boolean isUpLeftWall    = isWallAt(x-handler.gameUnit, y-handler.gameUnit),
+                    isUpWall        = isWallAt(x                 , y-handler.gameUnit),
+                    isUpRightWall   = isWallAt(x+handler.gameUnit, y-handler.gameUnit),
+                    isLeftWall      = isWallAt(x-handler.gameUnit, y                 ),
+                    isRightWall     = isWallAt(x+handler.gameUnit, y                 ),
+                    isDownLeftWall  = isWallAt(x-handler.gameUnit, y+handler.gameUnit),
+                    isDownWall      = isWallAt(x                 , y+handler.gameUnit),
+                    isDownRightWall = isWallAt(x+handler.gameUnit, y+handler.gameUnit);
+
+            Graphics g = this.collisionImage.getGraphics();
+            g.setColor(Color.WHITE);
+            if(isUpLeftWall)
+                g.fillRect(0, 0, floor(sizeX/2), floor(sizeY/2));
+            if(isUpWall)
+                g.fillRect(0, 0, floor(sizeX), floor(sizeY/2));
+            if(isUpRightWall)
+                g.fillRect(floor(sizeX/2), 0, floor(sizeX/2), floor(sizeY/2)); 
+            if(isLeftWall)
+                g.fillRect(0, 0, floor(sizeX/2), floor(sizeY));
+            if(isRightWall)
+                g.fillRect(floor(sizeX/2), 0, floor(sizeX/2), floor(sizeY));          
+            if(isDownLeftWall)
+                g.fillRect(0, floor(sizeY/2), floor(sizeX/2), floor(sizeY/2));
+            if(isDownWall)
+                g.fillRect(0, floor(sizeY/2), floor(sizeX), floor(sizeY/2));
+            if(isDownRightWall)
+                g.fillRect(floor(sizeX/2), floor(sizeY/2), floor(sizeX/2), floor(sizeY/2));
+
+            g.dispose();               
+        }
+    }
+
+    public boolean isWallAt(double i, double j){       
+        ArrayList <GameObject> objectList = handler.objectHashMap.get(handler.keyFromCoordinate(i,j));
+        if(objectList != null)
+            for(GameObject object: objectList)
+                if(object.id == GameObjectID.Wall)
+                    return true;
+        return false;        
     }
 
     public abstract void tick();
-    
     public abstract void render(Graphics g);
-
     public Rectangle getBounds(){
         return new Rectangle(floor(x), floor(y), floor(sizeX), floor(sizeY));
     }  
     
     public int floor (double value){
         return (int) Math.floor(value);
-    }
-    public double abs (double value){
-        return (double) Math.abs(value);
-    }
-    public float abs (float value){
-        return (float) Math.abs(value);
-    }
-
-    public void applyVelocity(){
-        if(velX!=0){ //update x position
-            handler.removeFromHashMap(this);      
-            x += velX;
-            if(isAnyCollision()){
-                //Slide in x velocity
-                boolean sideCollide = true;
-                if( sideCollide){ //slide to the up
-                    y-=1;
-                    if(isAnyCollision()){
-                        y-=1;
-                        if(isAnyCollision()){
-                            y+=2;                              
-                            sideCollide = true;
-                        }else   
-                            sideCollide = false;
-                    }else   
-                         sideCollide = false;
-                }
-                if(sideCollide){ //slide to the down
-                    y+=1;
-                    if(isAnyCollision()){
-                        y+=1;
-                        if(isAnyCollision()){
-                            y-=2;                    
-                            sideCollide = true;
-                        }else   
-                            sideCollide = false;
-                    }else   
-                         sideCollide = false;
-                }
-                
-                if(sideCollide){ //cha-cha no slide in x, go back
-                    x-=velX;
-                    velX=0;   
-                }
-            }
-            handler.addToHashMap(this);
-        }/*else{
-            if(x% 1 != 0) //if there is lingering floating value, floor it.
-                x = floor(x);
-        }*/
-
-       if(velY!=0){//update y position
-           handler.removeFromHashMap(this);      
-           y += velY;                
-           if(isAnyCollision()){
-               //Slide in x velocity                    
-               boolean sideCollide = true;
-               if( sideCollide){
-                   x-=1;
-                   if( sideCollide){
-                       x-=1;
-                       if(isAnyCollision()){ //slide to the left
-                           x+=2;                              
-                           sideCollide = true;
-                       }else   
-                           sideCollide = false;
-                   }else   
-                        sideCollide = false;
-               }
-               if(sideCollide){
-                   x+=1;
-                   if(isAnyCollision()){ //slide to the right
-                       x+=1;                 
-                       if(isAnyCollision()){
-                           x-=2;                    
-                           sideCollide = true;
-                       }else   
-                           sideCollide = false;
-                   }else   
-                        sideCollide = false;
-               }
-               
-               if(sideCollide){ //cha-cha no slide in y, go back
-                   y-=velY;
-                   velY=0;   
-               }
-           }
-           handler.addToHashMap(this);
-        }/*else{ 
-            if(y% 1 != 0) //if there is lingering floating value, floor it.
-                y = floor(y);
-        }*/
-
-        this.centerX = x+sizeXHalf;
-        this.centerY = y+sizeYHalf;
-   }
-
-    public void applyFriction(){
-        //reduce velocity / apply friction
-        applyFrictionX();
-        applyFrictionY();
-    }
-
-    public void applyFrictionX(){
-        //reduce X velocity / apply friction
-        if(velX>0)    
-            if(velX<1)  //if floating value but near zero.
-                velX = 0;
-            else
-                velX--;
-        else if(velX<0)  
-            if(velX>1)  //if floating value but near zero.
-                velX = 0;
-            else              
-                velX++; 
-    }
-
-    public void applyFrictionY(){
-        //reduce Y velocity / apply friction
-        if(velY>0)
-            if(velY<1)  //if floating value but near zero.
-                velY = 0;
-            else
-                velY--;
-        else if(velY<0)
-            if(velY>1)  //if floating value but near zero.
-                velY = 0;
-            else
-                velY++;
     }
 
     /*
@@ -225,31 +146,14 @@ public abstract class GameObject{
 
         */  
 
-    public boolean isAnyCollision(){          
+    public boolean checkAnyCollision(){          
         //checks for any collision with any objects
-        for(int i = floor(x/handler.gameUnit)-1 ; i<floor((x+sizeX)/handler.gameUnit)+1; i++)
+        for(int i = floor(x/handler.gameUnit)-1; i<floor((x+sizeX)/handler.gameUnit)+1; i++)
             for(int j = floor(y/handler.gameUnit)-1; j<floor((y+sizeY)/handler.gameUnit)+1; j++){
                 ArrayList <GameObject> objectList = handler.objectHashMap.get(new Point(i,j));
                 if(objectList != null)                    
                     for(GameObject object: objectList){                                           
-                        if(object.id != GameObjectID.Attack && !object.equals(this) && isCollidingWith(object)){
-                            return true;
-                        }
-                    }
-            }
-        
-        //if no collision
-        return false;
-    }
-
-    public boolean isAnyEnemyCollidableAt(double tx, double ty){          
-        //checks for any collision with any objects at a certain location
-        for(int i = floor(tx/handler.gameUnit)-1 ; i<floor((tx+sizeX)/handler.gameUnit)+1; i++)
-            for(int j = floor(ty/handler.gameUnit)-1; j<floor((ty+sizeY)/handler.gameUnit)+1; j++){
-                ArrayList <GameObject> objectList = handler.objectHashMap.get(new Point(i,j));
-                if(objectList != null)                    
-                    for(GameObject object: objectList){                                           
-                        if(object.id == GameObjectID.Enemy && !object.equals(this) && isCollidingWithAt(object, tx, ty)){
+                        if(!object.equals(this) && isCollidingWith(object)){
                             return true;
                         }
                     }
@@ -296,65 +200,6 @@ public abstract class GameObject{
         return false;
     }
 
-    public boolean isCollidingWithAt(GameObject object, double tx, double ty){
-        //check boundaries between this (at a certain location) and other object first
-        //if there is collision within bounding boxes/rectangles
-        Rectangle obj1 = getBounds(),
-                  obj2 = object.getBounds();
-        obj1.x = (int) tx;
-        obj1.y = (int) ty;
-        if(obj1.intersects(obj2)){
-            return true;
-            /*
-            //pixel perfect collision
-            Rectangle bounds =  getIntersectionBounds(obj1, obj2);
-            if(!bounds.isEmpty()){
-                // Check all the pixels in the collisionBounds to determine
-                // if there are any non-alpha pixel collisions.
-                for(int x = bounds.x; x < bounds.x+bounds.getWidth(); x++){
-                    for(int y = bounds.y; y < bounds.y+bounds.getHeight(); y++){
-                        //check if that specific pixel has both white pixel
-                        //getRGB returns hex value
-                        //0xFF000000 is white                        
-                        int obj1pixel = collisionImage.getRGB(x - obj1.x , y - obj1.y),
-                            obj2pixel = object.collisionImage.getRGB(x - obj2.x , y - obj2.y),
-                            red1 = (obj1pixel >> 16) & 0xff,
-                            green1 = (obj1pixel >> 8) & 0xff,
-                            blue1 = (obj1pixel) & 0xff,
-                            red2 = (obj2pixel >> 16) & 0xff,
-                            green2 = (obj2pixel >> 8) & 0xff,
-                            blue2 = (obj2pixel) & 0xff;
-
-                        //this is not smart and I dislike this.
-                        if(red1 == 255 && green1 == 255 && blue1 == 255 &&
-                           red2 == 255 && green2 == 255 && blue2 == 255)
-                        //if(obj1pixel == obj2pixel) //if both are white
-                            return true;    //if yes collision
-                    }    
-                }
-            }*/
-        }
-        //if no collision
-        return false;
-    }
-
-    public ArrayList <GameObject> getCollidedEnemies(){          
-        //checks for all collisions with objects and returns a list of them
-        ArrayList <GameObject> collidedEnemies = new ArrayList<>();
-        for(int i = floor(x/handler.gameUnit)-1 ; i<floor((x+sizeX)/handler.gameUnit)+1; i++)
-            for(int j = floor(y/handler.gameUnit)-1; j<floor((y+sizeY)/handler.gameUnit)+1; j++){
-                ArrayList <GameObject> objectList = handler.objectHashMap.get(new Point(i,j));
-                if(objectList != null)                    
-                    for(GameObject object: objectList){                                           
-                        if(object.id == GameObjectID.Enemy && !object.equals(this) && isCollidingWith(object)){
-                            collidedEnemies.add(object);
-                        }
-                    }
-            }
-        return collidedEnemies;
-    }
-    
-
     private Rectangle getIntersectionBounds(Rectangle r1, Rectangle r2){
         Area area1 = new Area(r1),
              area2 = new Area(r2);
@@ -362,82 +207,289 @@ public abstract class GameObject{
         return area1.getBounds();
     }
 
-    public double radiansToDegrees (double value){
-         return value * (180 / Math.PI);
-    }
-    public double degreesToRadians  (double value){
-            return value * (Math.PI / 180);
-    }
-
     public double getDegrees(double x1, double y1, double x2, double y2){
-        return radiansToDegrees(Math.atan2(y2-y1,x2-x1)) ;
+        return Math.atan2(y2-y1,x2-x1) * radiansToDegrees;
     }
 
-    public boolean isNearViaOrigin(double tx, double ty, double distance){
-        double deltaX = abs(tx - this.x),
-               deltaY = abs(ty - this.y);        
+
+
+    //A* Pathfinding ================================================================================================
+    public ArrayList <Point> generatePathTo(double tx, double ty){
+        Point origin = handler.keyFromCoordinate(x, y),
+              target = handler.keyFromCoordinate(tx, ty);
+        
+        final class NodePoint{  
+            //this will serve as the single point with a value cost, stored in the minHeap
+
+            NodePoint parentNode;   //used for backtracing the path when goal is found.
+            public Point location;  //the coordinate of this node
+            public double f = 0,
+                          g = 0,   
+                          h = 0;            
+            
+            public NodePoint(NodePoint parentNode, Point location, Point target){
+                this.parentNode = parentNode;
+                this.location = location;
+                
+                if(parentNode != null) //if this node is not an origin.            
+                    this.g = parentNode.g + manhattanDistance(parentNode.location, location);
+                //g is the distance "cost" from origin to this current node.
+                //get the parent's distance cost, then add the distance cost of this node
+                // from the parent via manhattan distance
+                //also known as Dijkstra's Algorithm
+                
+                h = 2 * manhattanDistance(location, target);     
+                //h is the "heuristic", the distance from this current node to the 
+                // target via manhattan distance
+                //also known as  Greedy Search                
+                //With a weight, multiply the effect of the Greedy Search to take more risks. It just works.
+                //This multiplication is called Weighted A*
+
+                f = g + h;
+                //f is the total
+                //The A* Algorithm is a combination  Dijkstra's Algorithm & Greedy Search.
+            }
+
+            private double manhattanDistance(Point point1, Point point2){
+                return Math.abs(point1.x - point2.x) + Math.abs(point1.y - point2.y);
+            }    
+
+            //we override the equals because we just need to use the Node's location as comparison
+            //regular equals would compare everything, not just the location.
+            @Override
+            public boolean equals(Object obj){  //we override the equals() for contains()
+                if(obj instanceof NodePoint){  //if obj is an NodePoint instance
+                    NodePoint node = (NodePoint) obj;
+                    return this.location.equals(node.location);
+                }                    
+                return false;                
+            }
+               
+            /*
+              "You must override hashCode() in every class that overrides equals().
+              Failure to do so will result in a violation of the general contract 
+              for Object.hashCode(), which will prevent your class from functioning 
+              properly in conjunction with all hash-based collections, including 
+              HashMap, HashSet, and Hashtable."
+
+                -from Effective Java, by Joshua Bloch
+            */
+            @Override
+            public int hashCode() {
+                return this.location.hashCode();
+            }
+            
+        }   
+        
+        PriorityQueue<NodePoint> openHeap = new PriorityQueue<NodePoint>(new Comparator<NodePoint>() {
+            @Override
+            public int compare(NodePoint ent1, NodePoint ent2) { //used when calling sort(). by smallest at the root
+                double answer = ent1.f - ent2.f;
+                if(answer > 0) return 1;        //if greater
+                else if (answer < 0) return  -1; //if less
+                else return 0;                  //if equal
+            }
+        });        
+        openHeap.add(new NodePoint(null, origin, target));        
+        //OpenHeap that contains the nodes/points to be evaluated.
+        //At the start, has the origin point.
+        //in common A* implementations, they use openlist. This is the equivalent
+        //we use a minHeap to priortize getting the lowest f-cost.
+
+        HashMap <Point, NodePoint> openListRef = new HashMap<>();
+        openListRef.put(origin, new NodePoint(null, origin, target));
+        //A second "OpenList" that uses a HashMap for O(1) speed.
+        //Because we also need to check the openList, but
+        //minHeaps don't have O(1) element checking.
+        //Everytime we add/remove elements in openHeap, we update this too.
+
+        HashMap <Point, NodePoint> closedList = new HashMap<>();
+        //The Closedlist that uses a HashMap for O(1) speed.
+        //Everytime a node is inspected in the OpenHeap/OpenList
+        //We add them here to mark them as "searched"
+
+        //System.out.println(origin+" "+target);      
+        
+        //Main A* Loop ----------------------------------------------------------------------------------------------
+        while(!openHeap.isEmpty() ){            
+
+            NodePoint currentNode = openHeap.poll();  //Pop and return the head, maintaining the heap.  
+            
+            if(openListRef.containsKey(currentNode.location))
+                if(openListRef.get(currentNode.location).f < currentNode.f ){
+                    currentNode = openListRef.get(currentNode.location);
+                }
+            openListRef.remove(currentNode.location);
+            
+            closedList.put(currentNode.location, currentNode); //Copy the currentNode to the closedList since it has been checked                                
+
+            if(currentNode.location.equals(target) || origin == target){ //if target is found or target and origin are the same -------
+                //System.out.println("size "+openHeap.size());
+                ArrayList <Point> path = new ArrayList<>();                
+                
+                NodePoint node = currentNode.parentNode;
+                
+                while(node.parentNode != null){
+                    //mulitply each coordinate by gameUnit
+                    Point realLocation = new Point((node.location.x * handler.gameUnit),
+                                                   (node.location.y * handler.gameUnit));
+                    //path.add(node.location);
+                    path.add(realLocation);
+                    node = node.parentNode;
+                }
+                Collections.reverse(path);                
+                
+                //System.out.println("Path found!");
+                return path;
+                
+            }else{  //Generate children successors of current node in eight directions -----------------------------
+              /* Children Nodes in 8 directions
+                ---------------------------------
+                | x-1, y-1 |  x, y-1 | x+1, y-1 |
+                ---------------------------------
+                | x-1, y   |  x, y   | x+1, y   |
+                ---------------------------------                
+                | x-1, y+1 |  x, y+1 | x+1, y+1 |
+                --------------------------------- */
+                /*
+                //Not considering if gameObject is larger than one tile
+                for(int i=-1; i<2; i++)
+                    for(int j=-1; j<2; j++){
+                        //for k
+                        //for l
+                        Point newLocation = new Point(currentNode.location.x+i, currentNode.location.y+j);
+                        if( !closedList.containsKey(newLocation)
+                            &&
+                            (newLocation.x >-1 && newLocation.x < handler.gridObstacles.length)
+                            &&
+                            (newLocation.y >-1 && newLocation.y < handler.gridObstacles[0].length)){
+
+                            if(!handler.gridObstacles[newLocation.x][newLocation.y]){ //if no obstacle in that location
+                                if( (Math.abs(i) == Math.abs(j)) && Math.abs(i)>0 && Math.abs(j)!=0 ){   //if node is a corner
+                                    if(!handler.gridObstacles[currentNode.location.x][newLocation.y]
+                                        &&
+                                        !handler.gridObstacles[newLocation.x][currentNode.location.y]) //check adjacent of corner
+
+                                       openHeap.add(new NodePoint(currentNode, newLocation, target));
+                                }else
+                                    openHeap.add(new NodePoint(currentNode, newLocation, target));
+                            }
+                        }
+                    } 
+
+                */
+                //Considering if gameObject is larger than one tile
+                for(int i=-1; i<2; i++)
+                    for(int j=-1; j<2; j++){
+                        boolean hasNoObstacle = true;
+                        Point newLocation = new Point(currentNode.location.x+i, currentNode.location.y+j);
+                        
+                        if(!closedList.containsKey(newLocation) &&
+                           !openListRef.containsKey(newLocation) &&
+                            (newLocation.x >-1 && newLocation.x < handler.gridObstacles.length) &&
+                            (newLocation.y >-1 && newLocation.y < handler.gridObstacles[0].length))
+                        { //if node is not in closed list, open list and within grid                            
+                            subLoops:
+                            for(int k = 0; k<(int) Math.floor(sizeX/handler.gameUnit); k++)
+                                for(int l = 0; l<(int) Math.floor(sizeY/handler.gameUnit); l++)                             
+                                    if( (newLocation.x+k >-1 && newLocation.x+k < handler.gridObstacles.length) &&
+                                        (newLocation.y+l >-1 && newLocation.y+l < handler.gridObstacles[0].length))
+                                    { //if node is not in closed list and within grid     
+                                        if(handler.gridObstacles[newLocation.x+k][newLocation.y+l]){ //if there is obstacle in that location
+                                            hasNoObstacle = false;
+                                            break subLoops;
+                                        }
+                                    }  
+                                    
+                            if( (Math.abs(i) == Math.abs(j)) && Math.abs(i)>0 && Math.abs(j)>0 && hasNoObstacle){   //if node is a corner                          
+                                boolean adjacentX = false,
+                                        adjacentY = false;    
+
+                                subLoops://check horizontal adjacent node of corner
+                                for(int k = 0; k<(int) Math.floor(sizeX/handler.gameUnit); k++)
+                                    for(int l = 0; l<(int) Math.floor(sizeY/handler.gameUnit); l++)
+                                        if(handler.gridObstacles[currentNode.location.x+k][newLocation.y+l] &&
+                                        (currentNode.location.x+k >-1 && currentNode.location.x+k< handler.gridObstacles.length) &&
+                                        (newLocation.y+l >-1 && newLocation.y+l < handler.gridObstacles[0].length) )
+                                        {//if there is obstacle in that location  and within grid  
+                                           adjacentX = true;
+                                           Point adjacentLocation = new Point(currentNode.location.x+k , newLocation.y+l);
+                                           closedList.put(adjacentLocation, new NodePoint(currentNode, adjacentLocation, target));
+                                           break subLoops;
+                                        } 
+
+                                subLoops://check Vertical adjacent node of corner
+                                for(int k = 0; k<(int) Math.floor(sizeX/handler.gameUnit); k++)
+                                    for(int l = 0; l<(int) Math.floor(sizeY/handler.gameUnit); l++)
+                                        if( handler.gridObstacles[newLocation.x+k][currentNode.location.y+l] &&
+                                            (newLocation.x+k >-1 && newLocation.x+k < handler.gridObstacles.length) &&
+                                            (currentNode.location.y+l >-1 && currentNode.location.y+l < handler.gridObstacles[0].length) )
+                                        {//if there is obstacle in that location  and within grid  
+                                           adjacentY = true;
+                                           Point adjacentLocation = new Point(newLocation.x+k, currentNode.location.y+l);
+                                           closedList.put(adjacentLocation, new NodePoint(currentNode, adjacentLocation, target));
+                                           break subLoops;
+                                        }       
+
+                                if(adjacentX || adjacentY)
+                                    hasNoObstacle = false;                                  
+
+                            }
+
+                            if(hasNoObstacle){
+                                /*//If node exists in openList, replace it.
+                                //Using this gives a more accurate result, 
+                                //but at a high cost as it rechecks openlist again and again
+                                //Decided to stop using this. "Fake it til you make it"
+                                NodePoint newNode = new NodePoint(currentNode, newLocation, target);
+                                if(openList.containsKey(newLocation)){
+                                    if(newNode.f < openList.get(newLocation).f){
+                                        openList.remove(newLocation);
+                                        openList.put(newLocation, newNode);
+                                    }
+                                }
+                                openHeap.add(newNode);   
+                                */                       
+                                NodePoint newNode = new NodePoint(currentNode, newLocation, target);
+                                openHeap.add(newNode);         
+                                openListRef.put(newLocation, newNode);
+                            }
+                        }                        
+                    }                
+
+            } 
+        }//Main A* Loop --------------------------------------------------------------------
+
+        //if openHeap is empty and hasn't returned any path, it means that path was not found.
+        //System.out.println("Path not found");
+        return null;
+    }
+    //A* Pathfinding ================================================================================================
+    
+    public boolean isNear(double tx, double ty){
+        double deltaX = Math.abs(tx - this.x),
+               deltaY = Math.abs(ty - this.y);
         //return deltaX <= handler.gameUnit/2 && deltaY <= handler.gameUnit/2;
-        return deltaX <= distance && deltaY <= distance;
+        return deltaX <= handler.gameUnit/8 && deltaY <= handler.gameUnit/8;
     }
 
-    public boolean isNearViaCenter(double tx, double ty, double distance){        
-        double deltaX = abs(tx - this.centerX),
-               deltaY = abs(ty - this.centerY);        
-        return deltaX <= distance && deltaY <= distance;
-    }
-
-
-    /*
-    //single line from center
     public boolean checkVisualContact(GameObject object){ //uses DDA (Digital Differential Analyzer) Algorithm
         Point origin = handler.keyFromCoordinate(x+(sizeX/2), y+(sizeY/2)),
               target = handler.keyFromCoordinate(object.x+(object.sizeX/2), object.y+(object.sizeY/2));
         float run =  target.x - origin.x,
 			  rise = target.y - origin.y,
-	   		  steps = abs(run) > abs(rise) ? abs(run) : abs(rise),
+	   		  steps = Math.abs(run) > Math.abs(rise) ? Math.abs(run) : Math.abs(rise),
     		  xStep = run / steps,
 			  yStep = rise / steps,
 			  x = origin.x,
 			  y = origin.y;
               
 		for(int i=0; i<=(float)steps; i++){
-			if(handler.gridObstacles[(int)floor(x)][(int)floor(y)]) //if there is a wall
+			if(handler.gridObstacles[(int)Math.floor(x)][(int)Math.floor(y)]) //if there is a wall
                 return false;
 			x+=xStep;
 			y+=yStep;
 		}
         return true;
     }
-    */
-
-    //using four points    
-    public boolean checkVisualContact(GameObject object){ //uses DDA (Digital Differential Analyzer) Algorithm
-        Point origin [] = {handler.keyFromCoordinate(x, y),
-                           handler.keyFromCoordinate(x, y+sizeY-1),
-                           handler.keyFromCoordinate(x+sizeX-1, y),
-                           handler.keyFromCoordinate(x+sizeX-1, y+sizeY-1)},
-              target [] = {handler.keyFromCoordinate(object.x, object.y),
-                           handler.keyFromCoordinate(object.x, object.y+object.sizeY-1),
-                           handler.keyFromCoordinate(object.x+object.sizeX-1, object.y),
-                           handler.keyFromCoordinate(object.x+object.sizeX-1, object.y+object.sizeY-1)};
-        for(int a=0; a<4; a++){
-            float run =  target[a].x - origin[a].x,
-		    	  rise = target[a].y - origin[a].y,
-	   	    	  steps = abs(run) > abs(rise) ? abs(run) : abs(rise),
-    	    	  xStep = run / steps,
-		    	  yStep = rise / steps,
-		    	  x = origin[a].x,
-		    	  y = origin[a].y;
-            
-		    for(int i=0; i<=(float)steps; i++){
-                try{		    	
-                    if(handler.gridObstacles[(int)floor(x)][(int)floor(y)])   //if there is a wall                      //  || handler.objectHashMap.get(new Point((int)floor(x),(int)floor(y))) != null)
-                        return false;
-                }catch(ArrayIndexOutOfBoundsException ex){}
-		    	x+=xStep;
-		    	y+=yStep;
-		    }            
-        }
-        return true;
-    }    
 }
