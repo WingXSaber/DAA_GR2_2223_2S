@@ -1,8 +1,10 @@
 # TopDownShooter-Aswang
-(formerly DAA_GR2_2223_2S)
+
 2D Top Down Shooter Video Game with Filipino Mythological Theme, using Java without external libraries.
+
 Developed for Design Analysis and Algorithm - COSC 30033, A.Y. 2022-2023 - 2nd Sem
 
+Formerly known as DAA_GR2_2223_2S.
 <br>
 <br>
 ## Setup
