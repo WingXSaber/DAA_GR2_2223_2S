@@ -7,12 +7,19 @@ Developed for Design Analysis and Algorithm - COSC 30033, A.Y. 2022-2023 - 2nd S
 Formerly known as DAA_GR2_2223_2S.
 <br>
 <br>
+
+## Preview
+![Alt Text](DAA1.gif)
+<br>
+<br>
+
 ## Setup
 
 ### It just works
 Just download and run the ```DAAProject.jar``` file in the ```releases``` section if you wanna try it out. :) <br>
 <br>
-Or<br>
+Or
+<br>
 
 ### Compile and Run
 Download the source files and compile all files using ```java *.java``` then run it using ```java Game```
