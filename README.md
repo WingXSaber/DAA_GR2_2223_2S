@@ -26,7 +26,7 @@ Or
 <br>
 
 ### Compile and Run
-Download the source files and compile all files using ```java *.java``` then run it using ```java Game```
+Download the source files and compile all files using ```javac *.java``` then run it using ```java Game```
 <br>
 <br>
 ## How to Play
