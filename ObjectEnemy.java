@@ -297,7 +297,7 @@ public abstract class ObjectEnemy extends GameObject{
         //System.out.println(origin+" "+target);      
         
         //Main A* Loop ----------------------------------------------------------------------------------------------
-        while(!openHeap.isEmpty() ){            
+        while(!openHeap.isEmpty() && closedList.size() < 5000){            
 
             NodePoint currentNode = openHeap.poll();  //Pop and return the head, maintaining the heap.  
             

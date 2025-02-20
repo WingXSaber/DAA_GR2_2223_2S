@@ -64,7 +64,7 @@ public class GameObjectHandler {
             for(GameObject gameObject : toBeRemovedObjectList){
                 allObjectList.remove(gameObject);                
                 removeFromHashMap(gameObject);                
-                gameObject = null;
+                //gameObject = null;
                 //allObjectCount--;
             }
             this.toBeRemovedObjectList = new ArrayList<>();

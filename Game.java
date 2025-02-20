@@ -132,12 +132,14 @@ public class Game extends Canvas implements Runnable {
    //restart game
    public void restart() {
       if (this.camera != null && this.level != null && this.gameObjectHandler != null) {
+         isPaused = true;
          this.camera = new ViewCamera(0.0D, 0.0D, (double)this.windowWidth, (double)this.windowHeight);
          this.gameObjectHandler = new GameObjectHandler(this.gameUnit, this.GAME_HERTZ, this.camera);
          this.addKeyListener(new KeyInput(this.gameObjectHandler));
          this.addMouseListener(new MouseInputButton(this.gameObjectHandler));
          this.addMouseMotionListener(new MouseInputMotion(this.gameObjectHandler));
-         this.spawnLevel(this.level);
+         this.spawnLevel(this.level);         
+         isPaused = false;
       }
    }
 
@@ -202,9 +204,9 @@ public class Game extends Canvas implements Runnable {
       g.setColor(Color.WHITE);
       String weaponSelectedText = "";
       if (this.gameObjectHandler.player.equipped == ObjectPlayerWeaponID.Bolo) {
-         weaponSelectedText = "Bolo";
+         weaponSelectedText = "[Q] Bolo";
       } else if (this.gameObjectHandler.player.equipped == ObjectPlayerWeaponID.Pistol) {
-         weaponSelectedText = "Pistol";
+         weaponSelectedText = "[Q] Pistol";
       }
       g.drawString(weaponSelectedText, this.camera.getIntX() + 20, this.camera.getIntY() + 20 + healthBarHeight + 10 + 10);        
 

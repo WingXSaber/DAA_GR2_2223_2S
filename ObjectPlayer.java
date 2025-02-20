@@ -142,7 +142,7 @@ public class ObjectPlayer extends GameObject{
                                                          centerY+yIntercept*attackOffset,                                                    
                                                          seconds,
                                                          angleTarget));
-                //angleTarget = 0;
+                //angleTarget = 0;                
                 isAttack = false;
             }
 
