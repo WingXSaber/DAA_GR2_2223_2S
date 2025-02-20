@@ -10,7 +10,7 @@ Formerly known as DAA_GR2_2223_2S.
 ## Setup
 
 ### It just works
-Just download and run the Jar file in the ```releases``` section (labed Alpha) if you wanna try it out. :) <br>
+Just download and run the ```DAAProject.jar``` file in the ```releases``` section if you wanna try it out. :) <br>
 <br>
 Or<br>
 
