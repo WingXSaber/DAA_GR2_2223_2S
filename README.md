@@ -10,6 +10,8 @@ Formerly known as DAA_GR2_2223_2S.
 
 ## Preview
 ![Alt Text](DAA1.gif)
+Implements pathfinding if enemies can't see player via ray-tracing:
+![Alt Text](DAA2.gif)
 <br>
 <br>
 
